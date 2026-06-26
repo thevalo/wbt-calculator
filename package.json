@@ -1,0 +1,16 @@
+{
+  "name": "wbt-calculator",
+  "version": "1.0.0",
+  "description": "Llogaritësi i Temperaturës së Bulbit të Lagësht (WBT) sipas formulës së Stull",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3",
+    "vite": "^6.0.3"
+  }
+}
