@@ -2,6 +2,8 @@
   "name": "wbt-calculator",
   "version": "1.0.0",
   "description": "Llogaritësi i Temperaturës së Bulbit të Lagësht (WBT) sipas formulës së Stull",
+  "license": "MIT",
+  "author": "Valonis \"TheVaLo\" Ramadani",
   "private": true,
   "type": "module",
   "scripts": {
