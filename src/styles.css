@@ -93,6 +93,73 @@ body {
   backdrop-filter: blur(10px);
 }
 
+/* ---------- Live weather banner ---------- */
+.live {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  font-size: 0.9rem;
+  padding: 0.7rem 0.85rem;
+  margin-bottom: 1.4rem;
+  border-radius: 12px;
+  background: rgba(56, 189, 248, 0.08);
+  border: 1px solid rgba(56, 189, 248, 0.22);
+  color: var(--text);
+}
+
+.live__dot {
+  flex: 0 0 auto;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.2);
+}
+
+.live__text {
+  flex: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.live[data-state="loading"] .live__dot {
+  animation: blink 1s ease-in-out infinite;
+}
+
+.live[data-state="error"] {
+  background: rgba(239, 68, 68, 0.08);
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+.live[data-state="error"] .live__dot {
+  background: var(--extreme);
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.2);
+}
+
+.live__refresh {
+  flex: 0 0 auto;
+  width: 30px;
+  height: 30px;
+  font-size: 1.05rem;
+  line-height: 1;
+  cursor: pointer;
+  color: var(--text-dim);
+  background: transparent;
+  border: 1px solid var(--card-border);
+  border-radius: 8px;
+  transition: color 0.15s ease, border-color 0.15s ease, transform 0.3s ease;
+}
+
+.live__refresh:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+  transform: rotate(180deg);
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.25; }
+}
+
 /* ---------- Controls ---------- */
 .controls {
   display: flex;

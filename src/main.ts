@@ -110,6 +110,12 @@ app.innerHTML = /* html */ `
     </header>
 
     <section class="card calc" aria-label="Llogaritësi">
+      <div id="live" class="live" data-state="loading">
+        <span class="live__dot" aria-hidden="true"></span>
+        <span id="live-text" class="live__text">Po marrim motin e tanishëm në Prishtinë…</span>
+        <button id="live-refresh" class="live__refresh" type="button" aria-label="Përditëso motin">↻</button>
+      </div>
+
       <div class="controls">
         <div class="field">
           <label for="temp">Temperatura e ajrit</label>
@@ -237,3 +243,103 @@ bindPair(tempRange, tempNum);
 bindPair(rhRange, rhNum);
 
 update();
+
+/* ---------------- Moti i tanishëm në Prishtinë (Open-Meteo) ----------------
+ * Në hyrjen e parë marrim temperaturën dhe lagështinë aktuale të Prishtinës
+ * dhe i parambushim fushat, që përdoruesi të shohë "si është jashtë tani".
+ * E ruajmë në localStorage për 30 min, që vizitat e përsëritura të mos
+ * thërrasin sërish API-n. Rrëshqitësit mbeten plotësisht të lirë për prova.
+ * Open-Meteo është falas dhe pa çelës API (asgjë sekrete në kodin e klientit).
+ */
+const PRISTINA = { lat: 42.6629, lon: 21.1655 };
+const WX_CACHE_KEY = "wbt:pristina";
+const WX_TTL_MS = 30 * 60 * 1000; // 30 minuta
+
+interface WxCache {
+  t: number;
+  rh: number;
+  fetchedAt: number;
+}
+
+const liveEl = document.querySelector<HTMLDivElement>("#live")!;
+const liveText = document.querySelector<HTMLSpanElement>("#live-text")!;
+const liveRefresh = document.querySelector<HTMLButtonElement>("#live-refresh")!;
+
+/** Kufizon vlerën brenda min/max të një fushe input, që rrëshqitësi e fusha të jenë në sinkron. */
+function clampToInput(el: HTMLInputElement, v: number): number {
+  return Math.min(Number(el.max), Math.max(Number(el.min), v));
+}
+
+function applyReadings(t: number, rh: number) {
+  const tv = clampToInput(tempRange, t);
+  const rv = clampToInput(rhRange, Math.round(rh));
+  tempRange.value = tempNum.value = String(tv);
+  rhRange.value = rhNum.value = String(rv);
+  update();
+}
+
+function setLive(state: "loading" | "ok" | "error", text: string) {
+  liveEl.dataset.state = state;
+  liveText.textContent = text;
+}
+
+function readCache(): WxCache | null {
+  try {
+    const c = JSON.parse(localStorage.getItem(WX_CACHE_KEY) ?? "") as WxCache;
+    if (typeof c?.t === "number" && typeof c?.rh === "number" && typeof c?.fetchedAt === "number") {
+      return c;
+    }
+  } catch {
+    /* localStorage e padisponueshme ose JSON i prishur — e shpërfillim */
+  }
+  return null;
+}
+
+function showFromCache(c: WxCache, stale = false) {
+  applyReadings(c.t, c.rh);
+  const time = new Date(c.fetchedAt).toLocaleTimeString("sq-AL", { hour: "2-digit", minute: "2-digit" });
+  const suffix = stale ? " (i ruajtur)" : "";
+  setLive("ok", `📍 Tani në Prishtinë: ${fmt(c.t)} °C · ${Math.round(c.rh)}% lagështi · përditësuar ${time}${suffix}`);
+}
+
+async function fetchWeather(): Promise<WxCache> {
+  const url =
+    `https://api.open-meteo.com/v1/forecast?latitude=${PRISTINA.lat}` +
+    `&longitude=${PRISTINA.lon}&current=temperature_2m,relative_humidity_2m`;
+  const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const data = await res.json();
+  const t = Number(data?.current?.temperature_2m);
+  const rh = Number(data?.current?.relative_humidity_2m);
+  if (!Number.isFinite(t) || !Number.isFinite(rh)) throw new Error("Përgjigje e pavlefshme");
+  const cache: WxCache = { t, rh, fetchedAt: Date.now() };
+  try {
+    localStorage.setItem(WX_CACHE_KEY, JSON.stringify(cache));
+  } catch {
+    /* localStorage mund të jetë i mbushur ose i bllokuar — vazhdojmë pa e ruajtur */
+  }
+  return cache;
+}
+
+async function loadWeather(force = false) {
+  const cached = readCache();
+  // Cache i freskët dhe pa kërkesë rifreskimi → përdore menjëherë, pa thirrje rrjeti
+  if (!force && cached && Date.now() - cached.fetchedAt < WX_TTL_MS) {
+    showFromCache(cached);
+    return;
+  }
+  setLive("loading", "Po marrim motin e tanishëm në Prishtinë…");
+  try {
+    showFromCache(await fetchWeather());
+  } catch {
+    if (cached) {
+      showFromCache(cached, true); // rikthehu te cache-i i vjetër
+    } else {
+      setLive("error", "Moti i Prishtinës s'u mor dot — po përdoren vlera shembull. Provo ↻.");
+    }
+  }
+}
+
+liveRefresh.addEventListener("click", () => loadWeather(true));
+
+loadWeather();
