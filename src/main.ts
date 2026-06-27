@@ -123,7 +123,6 @@ app.innerHTML = /* html */ `
             <input id="temp" type="range" min="-10" max="55" step="0.5" value="43" />
             <output id="temp-out" class="value">43 °C</output>
           </div>
-          <input id="temp-num" class="num" type="number" min="-20" max="55" step="0.5" value="43" inputmode="decimal" />
         </div>
 
         <div class="field">
@@ -132,7 +131,6 @@ app.innerHTML = /* html */ `
             <input id="rh" type="range" min="5" max="100" step="1" value="55" />
             <output id="rh-out" class="value">55 %</output>
           </div>
-          <input id="rh-num" class="num" type="number" min="5" max="100" step="1" value="55" inputmode="numeric" />
         </div>
       </div>
 
@@ -191,10 +189,8 @@ rangesEl.innerHTML = RANGE_INFO.map(
 ).join("");
 
 const tempRange = document.querySelector<HTMLInputElement>("#temp")!;
-const tempNum = document.querySelector<HTMLInputElement>("#temp-num")!;
 const tempOut = document.querySelector<HTMLOutputElement>("#temp-out")!;
 const rhRange = document.querySelector<HTMLInputElement>("#rh")!;
-const rhNum = document.querySelector<HTMLInputElement>("#rh-num")!;
 const rhOut = document.querySelector<HTMLOutputElement>("#rh-out")!;
 const wbtEl = document.querySelector<HTMLDivElement>("#wbt")!;
 const badgeEl = document.querySelector<HTMLDivElement>("#badge")!;
@@ -202,19 +198,12 @@ const descEl = document.querySelector<HTMLParagraphElement>("#result-desc")!;
 const resultEl = document.querySelector<HTMLDivElement>("#result")!;
 
 function update() {
-  const T = Number(tempNum.value);
-  const RH = Number(rhNum.value);
+  // Vlerat vijnë vetëm nga rrëshqitësit, ndaj janë gjithmonë brenda kufijve të vlefshëm.
+  const T = Number(tempRange.value);
+  const RH = Number(rhRange.value);
 
   tempOut.textContent = `${fmt(T)} °C`;
   rhOut.textContent = `${Math.round(RH)} %`;
-
-  if (!Number.isFinite(T) || !Number.isFinite(RH) || RH < 1) {
-    wbtEl.textContent = "—";
-    badgeEl.textContent = "—";
-    badgeEl.className = "badge";
-    descEl.textContent = "";
-    return;
-  }
 
   const wbt = wetBulbStull(T, RH);
   const band = classify(wbt);
@@ -226,21 +215,8 @@ function update() {
   resultEl.dataset.tone = band.tone;
 }
 
-// Mban rrëshqitësin dhe fushën numerike të sinkronizuara
-function bindPair(range: HTMLInputElement, num: HTMLInputElement) {
-  range.addEventListener("input", () => {
-    num.value = range.value;
-    update();
-  });
-  num.addEventListener("input", () => {
-    const v = Number(num.value);
-    if (Number.isFinite(v)) range.value = String(v);
-    update();
-  });
-}
-
-bindPair(tempRange, tempNum);
-bindPair(rhRange, rhNum);
+tempRange.addEventListener("input", update);
+rhRange.addEventListener("input", update);
 
 update();
 
@@ -271,10 +247,8 @@ function clampToInput(el: HTMLInputElement, v: number): number {
 }
 
 function applyReadings(t: number, rh: number) {
-  const tv = clampToInput(tempRange, t);
-  const rv = clampToInput(rhRange, Math.round(rh));
-  tempRange.value = tempNum.value = String(tv);
-  rhRange.value = rhNum.value = String(rv);
+  tempRange.value = String(clampToInput(tempRange, t));
+  rhRange.value = String(clampToInput(rhRange, Math.round(rh)));
   update();
 }
 
